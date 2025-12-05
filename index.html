@@ -690,17 +690,46 @@ document.getElementById('tab4Btn').addEventListener('click', function() {
             // 处理数据
             processBtn.addEventListener('click', () => {
                 try {
-                    // 解析第一个输入框的数据
-                    const input1Lines = input1.value.trim().split('\n')
-                        .filter(line => line.trim() !== '')
-                        .map(line => {
-                            const parts = line.split(',').map(part => part.trim());
-                            return {
-                                msku: parts[0],
-                                requestQty: parseFloat(parts[1]),
-                                status: parts.slice(2).join(', ')
-                            };
-                        });
+// 解析第一个输入框的数据（按倒数前两个逗号分割）
+const input1Lines = input1.value.trim().split('\n')
+    .filter(line => line.trim() !== '')
+    .map(line => {
+        const lineTrimmed = line.trim();
+        // 找到所有逗号的索引位置
+        const commaIndices = [];
+        for (let i = 0; i < lineTrimmed.length; i++) {
+            if (lineTrimmed[i] === ',') commaIndices.push(i);
+        }
+        
+        let msku, requestQty, status;
+        // 情况1：逗号数量 >=2（满足倒数两个逗号的条件）
+        if (commaIndices.length >= 2) {
+            // 倒数第二个逗号的位置（分割MSKU和数量的边界）
+            const secondLastCommaIdx = commaIndices[commaIndices.length - 2];
+            // 倒数第一个逗号的位置（分割数量和状态的边界）
+            const lastCommaIdx = commaIndices[commaIndices.length - 1];
+            
+            // MSKU：从开头到倒数第二个逗号（含中间逗号，如"UD-Black,M-3pac"）
+            msku = lineTrimmed.slice(0, secondLastCommaIdx).trim();
+            // 数量：倒数第二个逗号到倒数第一个逗号之间的内容
+            requestQty = parseFloat(lineTrimmed.slice(secondLastCommaIdx + 1, lastCommaIdx).trim());
+            // 状态：倒数第一个逗号之后的内容（保留原格式）
+            status = lineTrimmed.slice(lastCommaIdx + 1).trim();
+        } 
+        // 情况2：逗号数量 <2（兼容原有格式，按原逻辑分割）
+        else {
+            const parts = lineTrimmed.split(',').map(part => part.trim());
+            msku = parts[0] || '';
+            requestQty = parts.length >=2 ? parseFloat(parts[1]) : NaN;
+            status = parts.slice(2).join(', ') || '';
+        }
+        
+        return {
+            msku: msku,
+            requestQty: isNaN(requestQty) ? 0 : requestQty, // 无效数量默认0
+            status: status
+        };
+    });
 
                     if (input1Lines.length === 0) {
                         showStatus('请在第一个输入框中输入数据', true);
